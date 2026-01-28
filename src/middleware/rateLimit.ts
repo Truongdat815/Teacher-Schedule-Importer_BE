@@ -18,11 +18,11 @@ export const apiLimiter = rateLimit({
 
 /**
  * Strict rate limiter for authentication endpoints
- * Limits: 5 requests per 15 minutes per IP
+ * Limits: 50 requests per 15 minutes per IP
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 50, // Limit each IP to 50 requests per windowMs
   message: {
     success: false,
     error: 'Too Many Requests',

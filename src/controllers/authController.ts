@@ -163,3 +163,29 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
         next(error);
     }
 };
+
+/**
+ * Logout user and clear cookies
+ */
+export const logout = (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Clear httpOnly cookies
+        res.clearCookie('accessToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+        });
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+        });
+
+        res.json({
+            success: true,
+            message: 'Logged out successfully',
+        });
+    } catch (error: any) {
+        next(error);
+    }
+};

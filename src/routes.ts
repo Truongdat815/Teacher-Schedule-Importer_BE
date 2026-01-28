@@ -61,6 +61,27 @@ router.post(
   authController.refreshToken
 );
 
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout and clear session | Đăng xuất và xóa phiên
+ *     description: Clear authentication cookies and end user session | Xóa cookies xác thực và kết thúc phiên người dùng
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *       401:
+ *         description: Unauthorized - Token required
+ */
+router.post(
+  '/auth/logout',
+  authenticate,
+  authController.logout
+);
+
 // ============ SHEETS & CALENDAR ROUTES ============
 import * as sheetsController from './controllers/sheetsController';
 import * as calendarController from './controllers/calendarController';
@@ -173,6 +194,27 @@ router.post(
   authenticate,
   validate({ body: calendarSyncInputSchema }),
   calendarController.syncSheetToCalendar
+);
+
+/**
+ * @swagger
+ * /api/calendar/events:
+ *   get:
+ *     summary: Get synced calendar events | Lấy danh sách sự kiện đã đồng bộ
+ *     description: Retrieve all calendar events synced for current user | Lấy danh sách tất cả các sự kiện lịch đã đồng bộ của người dùng hiện tại
+ *     tags: [Calendar]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Events retrieved successfully
+ *       401:
+ *         description: Unauthorized - Token required
+ */
+router.get(
+  '/calendar/events',
+  authenticate,
+  calendarController.getSyncedEvents
 );
 
 export default router;

@@ -206,3 +206,68 @@ export const syncSheetToCalendar = async (
     next(error);
   }
 };
+
+/**
+ * GET /api/calendar/events
+ * 
+ * Get all calendar events synced for current user
+ * Returns all ProjectEvents associated with user's CapstoneProjects
+ */
+export const getSyncedEvents = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError('User ID is required. Please login first.');
+    }
+
+    // Get all capstone projects for this user with their events
+    const projects = await prisma.capstoneProject.findMany({
+      where: { userId },
+      include: {
+        events: {
+          select: {
+            id: true,
+            stage: true,
+            date: true,
+            slot: true,
+            room: true,
+            councilCode: true,
+            reviewer1: true,
+            reviewer2: true,
+            googleEventId: true,
+            lastSyncedAt: true,
+            syncStatus: true,
+          },
+          orderBy: { date: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Flatten events from all projects with type assertion
+    const allEvents = projects.flatMap((project: any) =>
+      project.events.map((event: any) => ({
+        ...event,
+        projectId: project.id,
+        projectTopicCode: project.topicCode,
+        projectGroupCode: project.groupCode,
+      }))
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Synced events retrieved successfully',
+      data: {
+        events: allEvents,
+        projectCount: projects.length,
+        eventCount: allEvents.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
