@@ -25,9 +25,14 @@ export const authenticate = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Extract token from Authorization header
+    // Try to extract token from Authorization header first
     const authHeader = req.headers.authorization;
-    const token = extractTokenFromHeader(authHeader);
+    let token = extractTokenFromHeader(authHeader);
+
+    // If no Authorization header, try to get from httpOnly cookie
+    if (!token && req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
 
     if (!token) {
       throw new UnauthorizedError('No token provided. Please login first.');

@@ -5,38 +5,55 @@ import { BadRequestError } from '../utils/errors';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import prisma from '../config/prisma';
 
-const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-);
+/**
+ * Create OAuth2 client with dynamic callback URL
+ */
+const getOAuth2Client = () => {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const callbackUrl = `${backendUrl}/api/auth/google/callback`;
+
+    return new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        callbackUrl
+    );
+};
 
 export const getAuthUrl = (req: Request, res: Response) => {
+    const oauth2Client = getOAuth2Client();
+    
     const scopes = [
         'https://www.googleapis.com/auth/userinfo.profile',
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/calendar',
-        'https://www.googleapis.com/auth/spreadsheets.readonly', // If reading from sheets
+        'https://www.googleapis.com/auth/spreadsheets.readonly',
     ];
 
     const url = oauth2Client.generateAuthUrl({
-        access_type: 'offline', // Crucial for receiving refresh token
+        access_type: 'offline',
         scope: scopes,
-        prompt: 'consent', // Force consent to ensure refresh token is returned
+        prompt: 'consent',
+        state: 'security_token',
     });
 
-    res.json({ 
-        success: true,
-        url 
-    });
+    // Redirect user directly to Google OAuth
+    res.redirect(url);
 };
 
 export const googleCallback = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { tokens } = await oauth2Client.getToken(req.query.code as string);
+        const oauth2Client = getOAuth2Client();
+        const code = req.query.code as string;
+
+        if (!code) {
+            throw new BadRequestError('Authorization code not found');
+        }
+
+        // Exchange authorization code for tokens
+        const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
 
-        // Get basic user info
+        // Get user info from Google
         const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
         const userInfo = await oauth2.userinfo.get();
 
@@ -48,12 +65,12 @@ export const googleCallback = async (req: Request, res: Response, next: NextFunc
             throw new BadRequestError('Google ID not found in profile');
         }
 
-        // Save to DB
+        // Save/update user in database
         const user = await authService.findOrCreateUser(
             userInfo.data.email,
             userInfo.data.name || 'Unknown',
             userInfo.data.picture || '',
-            userInfo.data.id, // Google ID (sub)
+            userInfo.data.id,
             tokens
         );
 
@@ -61,23 +78,34 @@ export const googleCallback = async (req: Request, res: Response, next: NextFunc
         const accessToken = generateAccessToken(user.id, user.email);
         const refreshToken = generateRefreshToken(user.id, user.email);
 
-        // Return success with JWT tokens
-        res.json({
-            success: true,
-            message: 'Authentication successful',
-            data: {
-                accessToken,
-                refreshToken,
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                },
-            },
+        // Set secure httpOnly cookies
+        const isProduction = process.env.NODE_ENV === 'production';
+        res.cookie('accessToken', accessToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'strict' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'strict' : 'lax',
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
 
-    } catch (error) {
-        next(error);
+        // Redirect to frontend with success
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(
+            `${frontendUrl}/dashboard?success=true&email=${encodeURIComponent(user.email)}`
+        );
+
+    } catch (error: any) {
+        console.error('OAuth callback error:', error);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const errorMessage = error.message || 'Authentication failed';
+        res.redirect(
+            `${frontendUrl}/login?error=${encodeURIComponent(errorMessage)}`
+        );
     }
 };
 

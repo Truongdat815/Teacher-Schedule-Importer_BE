@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
@@ -24,9 +25,13 @@ app.use(
     },
   })
 );
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true, // Allow cookies to be sent
+}));
 app.use(morgan('dev'));
 app.use(express.json());
+app.use(cookieParser()); // Add cookie parser middleware
 
 // Rate limiting (apply to all routes)
 app.use('/api', apiLimiter);

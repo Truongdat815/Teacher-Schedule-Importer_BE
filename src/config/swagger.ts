@@ -24,12 +24,10 @@ const options = {
         },
       },
     },
-    // Security is defined per endpoint, not globally
   },
   apis: [
-    path.join(__dirname, '../routes.ts'),
-    path.join(__dirname, '../routes/*.ts'),
-    path.join(__dirname, '../controllers/*.ts'),
+    path.join(__dirname, '../**/*.ts'),
+    path.join(__dirname, '../**/*.js'),
   ],
 };
 

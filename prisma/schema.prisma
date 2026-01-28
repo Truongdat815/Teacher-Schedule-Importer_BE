@@ -15,8 +15,8 @@ model User {
   createdAt DateTime @default(now())
 
   // Relations
-  credential GoogleCredential?
-  mappings   EventMapping[]
+  credential      GoogleCredential?
+  capstoneProjects CapstoneProject[]
 }
 
 model GoogleCredential {
@@ -32,49 +32,98 @@ model GoogleCredential {
   updatedAt    DateTime @updatedAt
 }
 
-// --- 2. CORE BUSINESS LOGIC ---
-model EventMapping {
+// --- 2. CAPSTONE PROJECT MANAGEMENT ---
+
+// Bảng chứa thông tin chung của Đề tài/Nhóm (1 dòng Excel = 1 Project)
+model CapstoneProject {
   id           String   @id @default(uuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id])
 
-  // Source Metadata (Where did this come from?)
+  // Source Metadata (Nguồn từ Google Sheet nào)
   sheetId      String
   tabName      String
   rowNumber    Int
   
-  // Idempotency Key: MD5(sheetId + tab + row + content_signature)
-  sheetRowHash String   @unique 
+  // Idempotency Key: Hash của toàn bộ dòng Excel
+  // MD5(sheetId|tabName|rowNumber|topicCode|groupCode|topicNameEn|topicNameVi|mentor|mentor1|mentor2)
+  sheetRowHash String   @unique
 
-  // Core Event Data (Generic)
-  title         String   // Tiêu đề sự kiện (VD: Tên môn, Tên task)
-  startTime     DateTime
-  endTime       DateTime
+  // Static Project Information
+  topicCode    String?  // Mã đề tài (e.g., "SP123456")
+  groupCode    String?  // Mã nhóm (e.g., "GSP123345")
+  topicNameEn  String?  // Tên Tiếng Anh (e.g., "Portfolio")
+  topicNameVi  String?  // Tên Tiếng Việt (e.g., "Nền tảng vây dụng")
   
-  // Target Metadata (Google Calendar)
-  googleEventId String?   // ID sự kiện trên Calendar. Dùng để Update.
-  lastSyncedAt  DateTime @default(now())
-  syncStatus    String   // 'success' | 'failed'
+  // Supervisors / Mentors
+  mentor       String?  // GVHD chính (e.g., "Trương Long")
+  mentor1      String?  // GVHD1
+  mentor2      String?  // GVHD2
 
-  // Extended Attributes (Dynamic Key-Value for extra columns)
-  attributes    EventAttribute[]
+  // Project Events (Các mốc thời gian: Review 1-3, Defense 1-2, Supervisor)
+  events       ProjectEvent[]
 
-  // Indexes for better query performance
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   @@index([userId])
-  @@index([syncStatus])
-  @@index([userId, syncStatus])
-  @@index([startTime])
-  @@index([endTime])
+  @@index([sheetId, tabName])
+  @@index([topicCode])
+  @@index([groupCode])
 }
 
-model EventAttribute {
-  id             String       @id @default(uuid())
-  eventMappingId String
-  eventMapping   EventMapping @relation(fields: [eventMappingId], references: [id], onDelete: Cascade)
+// Bảng chứa Lịch trình - Mỗi giai đoạn là 1 record
+// Một Project có thể có: REV1, REV2, REV3, SUPERVISOR, DEF1, DEF2
+model ProjectEvent {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      CapstoneProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  key   String // e.g., "Giảng viên", "Phòng", "Note"
-  value String // e.g., "Nguyễn Văn A", "BE-401"
-  role  String? // e.g., "HOST", "ATTENDEE". Null if location/other.
+  // Stage: Giai đoạn nào (REVIEW 1-3, SUPERVISOR, DEFENSE 1-2)
+  stage        String   // Enum: "REV1" | "REV2" | "REV3" | "SUPERVISOR" | "DEF1" | "DEF2"
   
-  @@index([eventMappingId])
+  // Council / Reviewer Information
+  councilCode  String?  // Mã Hội đồng (e.g., "3411")
+  reviewer1    String?  // Reviewer 1 (e.g., "LongTS")
+  reviewer2    String?  // Reviewer 2
+  
+  // Date & Time Information
+  date         DateTime? // Ngày tổ chức (e.g., 2026-01-22)
+  slot         String?   // Tiết học (e.g., "1", "2")
+  room         String?   // Phòng học (e.g., "NYH G.02")
+  
+  // Conflict & Metadata (stored as JSON string for flexibility)
+  conflict     Boolean? @default(false) // REV1, REV2 conflict flag
+  conflictSupervisor String? // REV3: conflict info
+  matchReview2 String?  // REV3: match with review 2
+  conflict1    String?  // DEF1, DEF2: conflict 1
+  conflict2    String?  // DEF1, DEF2: conflict 2
+  reviewerCheck String? // DEF1, DEF2: reviewer check
+  
+  // Defense-specific fields
+  defenseList  String?  // Danh sách (for DEF1/DEF2)
+  groupCount   Int?     // Số lượng nhóm
+  state        String?  // Trạng thái (for DEF1/DEF2)
+  
+  // Metadata links (for history/audit)
+  review3SupervisorDiff String? // "Review 3- Supervisor Diff" column
+  supervisorDefense1Diff String? // "Supervisor-Defense 1" column
+  
+  // Result & Status
+  result       String?  // Kết quả (e.g., "PASS", "FAIL")
+  
+  // Google Calendar Sync
+  googleEventId String?  // ID sự kiện trên Calendar
+  lastSyncedAt DateTime? // Khi nào sync lần cuối
+  syncStatus   String?   // "success" | "failed"
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Constraint: Mỗi Project chỉ có 1 stage cụ thể
+  @@unique([projectId, stage])
+  @@index([projectId])
+  @@index([stage])
+  @@index([date])
+  @@index([googleEventId])
 }
