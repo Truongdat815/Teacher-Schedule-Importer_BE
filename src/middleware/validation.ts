@@ -32,7 +32,10 @@ export const validate = (schema: {
           field: err.path.join('.'),
           message: err.message,
         }));
-        return next(new ValidationError('Validation failed', 'VALIDATION_ERROR'));
+        const validationError = new ValidationError('Validation failed');
+        // Attach validation details to error for better error messages
+        (validationError as any).details = errors;
+        return next(validationError);
       }
       next(error);
     }

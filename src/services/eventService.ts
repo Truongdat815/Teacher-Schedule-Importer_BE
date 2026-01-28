@@ -183,11 +183,14 @@ export const deleteEventMapping = async (id: string) => {
 };
 
 /**
- * Get events by sync status
+ * Get events by sync status (optionally filtered by userId)
  */
-export const getEventsBySyncStatus = async (status: string) => {
+export const getEventsBySyncStatus = async (status: string, userId?: string) => {
   return await prisma.eventMapping.findMany({
-    where: { syncStatus: status },
+    where: {
+      syncStatus: status,
+      ...(userId && { userId }),
+    },
     include: { attributes: true },
     orderBy: { startTime: 'asc' },
   });

@@ -6,14 +6,33 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { apiLimiter } from './middleware/rateLimit';
+import { sanitize } from './middleware/sanitize';
 
 const app = express();
 
 // Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+        imgSrc: ["'self'", "data:", "https://validator.swagger.io"],
+      },
+    },
+  })
+);
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
+
+// Rate limiting (apply to all routes)
+app.use('/api', apiLimiter);
+
+// Input sanitization
+app.use(sanitize);
 
 // Routes
 app.use('/api', routes);

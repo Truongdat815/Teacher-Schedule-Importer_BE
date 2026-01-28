@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { AppError } from '../utils/errors';
+import { AppError, ValidationError } from '../utils/errors';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -15,6 +15,8 @@ export const errorHandler = (
   // Log error for debugging
   console.error('Error:', {
     message: err.message,
+    name: err.constructor.name,
+    isAppError: err instanceof AppError,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     path: req.path,
     method: req.method,
@@ -29,7 +31,7 @@ export const errorHandler = (
 
     return res.status(400).json({
       success: false,
-      error: 'Validation Error',
+      error: 'ValidationError',
       message: 'Invalid request data',
       details: errors,
     });
@@ -48,14 +50,21 @@ export const errorHandler = (
     });
   }
 
-  // Handle Custom App Errors
-  if (err instanceof AppError && err.isOperational) {
-    return res.status(err.statusCode).json({
+  // Handle Custom App Errors (including ValidationError)
+  if (err instanceof AppError) {
+    const response: any = {
       success: false,
-      error: err.constructor.name,
+      error: err.constructor.name.replace('Error', ''),
       message: err.message,
       ...(err.code && { code: err.code }),
-    });
+    };
+    
+    // Include validation details if available
+    if (err instanceof ValidationError && (err as any).details) {
+      response.details = (err as any).details;
+    }
+    
+    return res.status(err.statusCode).json(response);
   }
 
   // Handle Unknown Errors

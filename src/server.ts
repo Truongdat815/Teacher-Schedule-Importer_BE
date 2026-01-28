@@ -1,9 +1,7 @@
 import app from './app';
-import dotenv from 'dotenv';
+import './config/env'; // Validate environment variables on startup
 
-dotenv.config();
-
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

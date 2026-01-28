@@ -7,9 +7,8 @@ export const eventAttributeSchema = z.object({
   role: z.string().nullable().optional(),
 });
 
-// Create Event Schema
+// Create Event Schema (userId is taken from JWT token, not from body)
 export const createEventSchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
   sheetId: z.string().min(1, 'Sheet ID is required'),
   tabName: z.string().min(1, 'Tab name is required'),
   rowNumber: z.number().int().min(0).optional().default(0),
@@ -54,10 +53,8 @@ export const updateEventSchema = z.object({
   }
 );
 
-// Get Events Query Schema
-export const getEventsQuerySchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
-});
+// Get Events Query Schema (userId is taken from JWT token, not from query)
+export const getEventsQuerySchema = z.object({});
 
 // Get Event by ID Params Schema
 export const getEventByIdParamsSchema = z.object({

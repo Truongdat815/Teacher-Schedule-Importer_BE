@@ -58,6 +58,13 @@ model EventMapping {
 
   // Extended Attributes (Dynamic Key-Value for extra columns)
   attributes    EventAttribute[]
+
+  // Indexes for better query performance
+  @@index([userId])
+  @@index([syncStatus])
+  @@index([userId, syncStatus])
+  @@index([startTime])
+  @@index([endTime])
 }
 
 model EventAttribute {

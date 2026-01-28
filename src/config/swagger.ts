@@ -24,11 +24,7 @@ const options = {
         },
       },
     },
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
+    // Security is defined per endpoint, not globally
   },
   apis: [
     path.join(__dirname, '../routes.ts'),
