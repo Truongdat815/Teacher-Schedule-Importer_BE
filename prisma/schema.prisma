@@ -1,0 +1,73 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --- 1. USER & AUTH ---
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  credential GoogleCredential?
+  mappings   EventMapping[]
+}
+
+model GoogleCredential {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  
+  googleId     String   @unique // The 'sub' field from Google
+  accessToken  String   // Short-lived token
+  refreshToken String?  // Long-lived token (CRITICAL for offline access)
+  scope        String?
+  expiresAt    DateTime?
+  updatedAt    DateTime @updatedAt
+}
+
+// --- 2. CORE BUSINESS LOGIC ---
+model EventMapping {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+
+  // Source Metadata (Where did this come from?)
+  sheetId      String
+  tabName      String
+  rowNumber    Int
+  
+  // Idempotency Key: MD5(sheetId + tab + row + content_signature)
+  sheetRowHash String   @unique 
+
+  // Core Event Data (Generic)
+  title         String   // Tiêu đề sự kiện (VD: Tên môn, Tên task)
+  startTime     DateTime
+  endTime       DateTime
+  
+  // Target Metadata (Google Calendar)
+  googleEventId String?   // ID sự kiện trên Calendar. Dùng để Update.
+  lastSyncedAt  DateTime @default(now())
+  syncStatus    String   // 'success' | 'failed'
+
+  // Extended Attributes (Dynamic Key-Value for extra columns)
+  attributes    EventAttribute[]
+}
+
+model EventAttribute {
+  id             String       @id @default(uuid())
+  eventMappingId String
+  eventMapping   EventMapping @relation(fields: [eventMappingId], references: [id], onDelete: Cascade)
+
+  key   String // e.g., "Giảng viên", "Phòng", "Note"
+  value String // e.g., "Nguyễn Văn A", "BE-401"
+  role  String? // e.g., "HOST", "ATTENDEE". Null if location/other.
+  
+  @@index([eventMappingId])
+}
