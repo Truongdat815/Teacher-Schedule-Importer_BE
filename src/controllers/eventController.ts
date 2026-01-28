@@ -1,174 +1,138 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import * as eventService from '../services/eventService';
+import { UnauthorizedError, NotFoundError } from '../utils/errors';
 
 /**
  * Create or update event mapping (idempotent)
  */
-export const createOrUpdateEvent = async (req: Request, res: Response) => {
+export const createOrUpdateEvent = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user?.id || req.body.userId; // Assuming auth middleware sets user
+    const userId = (req as any).user?.id || req.body.userId;
     if (!userId) {
-      res.status(401).json({ error: 'User ID is required' });
-      return;
-    }
-
-    const {
-      sheetId,
-      tabName,
-      rowNumber,
-      title,
-      startTime,
-      endTime,
-      attributes,
-    } = req.body;
-
-    // Validation
-    if (!sheetId || !tabName || !title || !startTime || !endTime) {
-      res.status(400).json({
-        error: 'Missing required fields: sheetId, tabName, title, startTime, endTime',
-      });
-      return;
+      throw new UnauthorizedError('User ID is required');
     }
 
     const event = await eventService.upsertEventMapping({
       userId,
-      sheetId,
-      tabName,
-      rowNumber: rowNumber || 0,
-      title,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
-      attributes,
+      sheetId: req.body.sheetId,
+      tabName: req.body.tabName,
+      rowNumber: req.body.rowNumber || 0,
+      title: req.body.title,
+      startTime: new Date(req.body.startTime),
+      endTime: new Date(req.body.endTime),
+      attributes: req.body.attributes,
     });
 
     res.status(200).json({
+      success: true,
       message: 'Event mapping created/updated successfully',
       data: event,
     });
-  } catch (error: any) {
-    console.error('Error creating/updating event:', error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
+  } catch (error) {
+    next(error);
   }
 };
 
 /**
  * Get all events for current user
  */
-export const getUserEvents = async (req: Request, res: Response) => {
+export const getUserEvents = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user?.id || (typeof req.query.userId === 'string' ? req.query.userId : undefined);
+    const userId = (req as any).user?.id || (req.query.userId as string);
     if (!userId) {
-      res.status(401).json({ error: 'User ID is required' });
-      return;
+      throw new UnauthorizedError('User ID is required');
     }
 
     const events = await eventService.getUserEventMappings(userId);
     res.status(200).json({
+      success: true,
       message: 'Events retrieved successfully',
       data: events,
       count: events.length,
     });
-  } catch (error: any) {
-    console.error('Error getting user events:', error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
+  } catch (error) {
+    next(error);
   }
 };
 
 /**
  * Get event by ID
  */
-export const getEventById = async (req: Request, res: Response) => {
+export const getEventById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = typeof req.params.id === 'string' ? req.params.id : req.params.id[0];
+    const id = req.params.id as string;
     const event = await eventService.getEventMappingById(id);
 
     if (!event) {
-      res.status(404).json({ error: 'Event not found' });
-      return;
+      throw new NotFoundError('Event not found');
     }
 
     res.status(200).json({
+      success: true,
       message: 'Event retrieved successfully',
       data: event,
     });
-  } catch (error: any) {
-    console.error('Error getting event:', error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
+  } catch (error) {
+    next(error);
   }
 };
 
 /**
  * Update event mapping
  */
-export const updateEvent = async (req: Request, res: Response) => {
+export const updateEvent = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = typeof req.params.id === 'string' ? req.params.id : req.params.id[0];
-    const updateData = req.body;
-
+    const id = req.params.id as string;
     const event = await eventService.updateEventMapping(id, {
-      title: updateData.title,
-      startTime: updateData.startTime ? new Date(updateData.startTime) : undefined,
-      endTime: updateData.endTime ? new Date(updateData.endTime) : undefined,
-      googleEventId: updateData.googleEventId,
-      syncStatus: updateData.syncStatus,
-      attributes: updateData.attributes,
+      title: req.body.title,
+      startTime: req.body.startTime ? new Date(req.body.startTime) : undefined,
+      endTime: req.body.endTime ? new Date(req.body.endTime) : undefined,
+      googleEventId: req.body.googleEventId,
+      syncStatus: req.body.syncStatus,
+      attributes: req.body.attributes,
     });
 
     res.status(200).json({
+      success: true,
       message: 'Event updated successfully',
       data: event,
     });
-  } catch (error: any) {
-    console.error('Error updating event:', error);
-    if (error.code === 'P2025') {
-      res.status(404).json({ error: 'Event not found' });
-      return;
-    }
-    res.status(500).json({ error: error.message || 'Internal server error' });
+  } catch (error) {
+    next(error);
   }
 };
 
 /**
  * Delete event mapping
  */
-export const deleteEvent = async (req: Request, res: Response) => {
+export const deleteEvent = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = typeof req.params.id === 'string' ? req.params.id : req.params.id[0];
+    const id = req.params.id as string;
     await eventService.deleteEventMapping(id);
 
     res.status(200).json({
+      success: true,
       message: 'Event deleted successfully',
     });
-  } catch (error: any) {
-    console.error('Error deleting event:', error);
-    if (error.code === 'P2025') {
-      res.status(404).json({ error: 'Event not found' });
-      return;
-    }
-    res.status(500).json({ error: error.message || 'Internal server error' });
+  } catch (error) {
+    next(error);
   }
 };
 
 /**
  * Get events by sync status
  */
-export const getEventsBySyncStatus = async (req: Request, res: Response) => {
+export const getEventsBySyncStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const statusParam = req.query.status;
-    const status = typeof statusParam === 'string' ? statusParam : (Array.isArray(statusParam) ? String(statusParam[0]) : String(statusParam));
-    if (!status || status === 'undefined') {
-      res.status(400).json({ error: 'Status query parameter is required' });
-      return;
-    }
-
+    const status = req.query.status as string;
     const events = await eventService.getEventsBySyncStatus(status);
     res.status(200).json({
+      success: true,
       message: 'Events retrieved successfully',
       data: events,
       count: events.length,
     });
-  } catch (error: any) {
-    console.error('Error getting events by status:', error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
+  } catch (error) {
+    next(error);
   }
 };

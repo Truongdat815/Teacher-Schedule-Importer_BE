@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { google } from 'googleapis';
 import * as authService from '../services/authService';
+import { BadRequestError } from '../utils/errors';
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -22,19 +23,15 @@ export const getAuthUrl = (req: Request, res: Response) => {
         prompt: 'consent', // Force consent to ensure refresh token is returned
     });
 
-    res.json({ url });
+    res.json({ 
+        success: true,
+        url 
+    });
 };
 
-export const googleCallback = async (req: Request, res: Response) => {
-    const { code } = req.query;
-
-    if (!code || typeof code !== 'string') {
-        res.status(400).json({ error: 'Invalid code provided' });
-        return;
-    }
-
+export const googleCallback = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { tokens } = await oauth2Client.getToken(code);
+        const { tokens } = await oauth2Client.getToken(req.query.code as string);
         oauth2Client.setCredentials(tokens);
 
         // Get basic user info
@@ -42,8 +39,7 @@ export const googleCallback = async (req: Request, res: Response) => {
         const userInfo = await oauth2.userinfo.get();
 
         if (!userInfo.data.email) {
-            res.status(400).json({ error: 'Email not found in Google profile' });
-            return;
+            throw new BadRequestError('Email not found in Google profile');
         }
 
         // Save to DB
@@ -57,6 +53,7 @@ export const googleCallback = async (req: Request, res: Response) => {
 
         // Return success (In a real app, you might issue your own JWT here)
         res.json({
+            success: true,
             message: 'Authentication successful',
             user: {
                 id: user.id,
@@ -67,7 +64,6 @@ export const googleCallback = async (req: Request, res: Response) => {
         });
 
     } catch (error) {
-        console.error('Error during Google Auth Callback:', error);
-        res.status(500).json({ error: 'Authentication failed' });
+        next(error);
     }
 };

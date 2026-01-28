@@ -136,10 +136,11 @@ export const getUserEventMappings = async (userId: string) => {
  * Get event mapping by ID
  */
 export const getEventMappingById = async (id: string) => {
-  return await prisma.eventMapping.findUnique({
+  const event = await prisma.eventMapping.findUnique({
     where: { id },
     include: { attributes: true },
   });
+  return event;
 };
 
 /**

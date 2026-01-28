@@ -1,5 +1,15 @@
 import { Router } from 'express';
 import { getHealth } from './controllers/healthController';
+import { validate } from './middleware/validation';
+import {
+  createEventSchema,
+  updateEventSchema,
+  getEventsQuerySchema,
+  getEventByIdParamsSchema,
+  eventIdParamsSchema,
+  getEventsByStatusQuerySchema,
+} from './validations/eventValidation';
+import { googleCallbackQuerySchema } from './validations/authValidation';
 
 const router = Router();
 
@@ -70,7 +80,11 @@ router.get('/auth/google/url', authController.getAuthUrl);
  *       500:
  *         description: Server error
  */
-router.get('/auth/google/callback', authController.googleCallback);
+router.get(
+  '/auth/google/callback',
+  validate({ query: googleCallbackQuerySchema }),
+  authController.googleCallback
+);
 
 // Event Routes
 import * as eventController from './controllers/eventController';
@@ -130,7 +144,11 @@ import * as eventController from './controllers/eventController';
  *       500:
  *         description: Server error
  */
-router.post('/events', eventController.createOrUpdateEvent);
+router.post(
+  '/events',
+  validate({ body: createEventSchema }),
+  eventController.createOrUpdateEvent
+);
 
 /**
  * @swagger
@@ -153,7 +171,11 @@ router.post('/events', eventController.createOrUpdateEvent);
  *       500:
  *         description: Server error
  */
-router.get('/events', eventController.getUserEvents);
+router.get(
+  '/events',
+  validate({ query: getEventsQuerySchema }),
+  eventController.getUserEvents
+);
 
 /**
  * @swagger
@@ -177,7 +199,11 @@ router.get('/events', eventController.getUserEvents);
  *       500:
  *         description: Server error
  */
-router.get('/events/status', eventController.getEventsBySyncStatus);
+router.get(
+  '/events/status',
+  validate({ query: getEventsByStatusQuerySchema }),
+  eventController.getEventsBySyncStatus
+);
 
 /**
  * @swagger
@@ -200,7 +226,11 @@ router.get('/events/status', eventController.getEventsBySyncStatus);
  *       500:
  *         description: Server error
  */
-router.get('/events/:id', eventController.getEventById);
+router.get(
+  '/events/:id',
+  validate({ params: getEventByIdParamsSchema }),
+  eventController.getEventById
+);
 
 /**
  * @swagger
@@ -246,7 +276,11 @@ router.get('/events/:id', eventController.getEventById);
  *       500:
  *         description: Server error
  */
-router.put('/events/:id', eventController.updateEvent);
+router.put(
+  '/events/:id',
+  validate({ params: eventIdParamsSchema, body: updateEventSchema }),
+  eventController.updateEvent
+);
 
 /**
  * @swagger
@@ -269,6 +303,10 @@ router.put('/events/:id', eventController.updateEvent);
  *       500:
  *         description: Server error
  */
-router.delete('/events/:id', eventController.deleteEvent);
+router.delete(
+  '/events/:id',
+  validate({ params: eventIdParamsSchema }),
+  eventController.deleteEvent
+);
 
 export default router;
