@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Google OAuth Callback</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 320px;
+    }
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    h2 { color: #333; margin-top: 0; }
+    p { color: #666; margin: 15px 0; }
+    .error { color: #d32f2f; }
+    .success { color: #388e3c; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="spinner"></div>
+  <h2>Processing Login...</h2>
+  <p id="status">Please wait...</p>
+</div>
+
+<script>
+const CLIENT_ID = "52666834832-47ancola9lgv8ea3li3d7kjqatg2k6i4.apps.googleusercontent.com";
+const REDIRECT_URI = "http://localhost:5000/callback.html";
+
+const params = new URLSearchParams(window.location.search);
+const code = params.get("code");
+const state = params.get("state");
+const error = params.get("error");
+const verifier = localStorage.getItem("pkce_verifier");
+const savedState = localStorage.getItem("oauth_state");
+
+const statusEl = document.getElementById("status");
+
+// Check for errors
+if (error) {
+  statusEl.innerHTML = `<p class="error">❌ Login failed: ${error}</p>`;
+  setTimeout(() => {
+    window.location.href = "http://localhost:5000/test-google-login.html";
+  }, 3000);
+} else if (!code) {
+  statusEl.innerHTML = `<p class="error">❌ No authorization code received</p>`;
+  setTimeout(() => {
+    window.location.href = "http://localhost:5000/test-google-login.html";
+  }, 3000);
+} else if (state !== savedState) {
+  statusEl.innerHTML = `<p class="error">❌ State mismatch - possible CSRF attack</p>`;
+  setTimeout(() => {
+    window.location.href = "http://localhost:5000/test-google-login.html";
+  }, 3000);
+} else {
+  // Exchange code for token
+  fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: CLIENT_ID,
+      code,
+      code_verifier: verifier,
+      grant_type: "authorization_code",
+      redirect_uri: REDIRECT_URI,
+    }),
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.error) {
+      throw new Error(data.error_description || data.error);
+    }
+    
+    // Save access token
+    localStorage.setItem("access_token", data.access_token);
+    localStorage.setItem("refresh_token", data.refresh_token || "");
+    localStorage.setItem("expires_at", Date.now() + (data.expires_in * 1000));
+    
+    // Fetch user info
+    return fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: {
+        Authorization: `Bearer ${data.access_token}`,
+      },
+    });
+  })
+  .then(res => res.json())
+  .then(userInfo => {
+    if (userInfo.error) {
+      throw new Error(userInfo.error.message);
+    }
+    
+    // Save user info
+    localStorage.setItem("user_email", userInfo.email);
+    localStorage.setItem("user_name", userInfo.name);
+    localStorage.setItem("user_picture", userInfo.picture);
+    
+    statusEl.innerHTML = `<p class="success">✅ Login successful!</p>`;
+    
+    // Redirect back to login page
+    setTimeout(() => {
+      window.location.href = "http://localhost:5000/test-google-login.html";
+    }, 1500);
+  })
+  .catch(error => {
+    console.error("Error:", error);
+    statusEl.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+    
+    setTimeout(() => {
+      window.location.href = "http://localhost:5000/test-google-login.html";
+    }, 3000);
+  });
+}
+</script>
+</body>
+</html>

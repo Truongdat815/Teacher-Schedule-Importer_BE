@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Google Login - FPTU Importer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .google-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .google-btn:hover {
+            background: #f8f9fa;
+            border-color: #4285f4;
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
+        }
+
+        .google-btn:active {
+            transform: scale(0.98);
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .user-info {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: left;
+            display: none;
+        }
+
+        .user-info h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .user-info p {
+            margin: 8px 0;
+            color: #555;
+        }
+
+        .user-info strong {
+            color: #333;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .api-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📚</div>
+        <h1>FPTU Importer</h1>
+        <p>Test Google Login Integration</p>
+
+        <button class="google-btn" id="loginBtn">
+            <svg class="google-icon" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Sign in with Google
+        </button>
+
+        <div class="status" id="status"></div>
+        
+        <div class="user-info" id="userInfo">
+            <h3>✅ Logged In Successfully!</h3>
+            <p><strong>Email:</strong> <span id="userEmail">-</span></p>
+            <p><strong>Name:</strong> <span id="userName">-</span></p>
+            <p><strong>Token:</strong> <span id="userToken" style="font-size: 10px; word-break: break-all;">-</span></p>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+
+        <div class="api-info">
+            <strong>Backend API:</strong> http://localhost:5000<br>
+            <strong>Client ID:</strong> 517...8ll.apps.googleusercontent.com
+        </div>
+
+        <div class="footer">
+            © 2026 FPTU Schedule Importer<br>
+            Test Environment
+        </div>
+    </div>
+
+    <script>
+        const CLIENT_ID = "52666834832-47ancola9lgv8ea3li3d7kjqatg2k6i4.apps.googleusercontent.com";
+        const REDIRECT_URI = "http://localhost:5000/callback.html";
+        const SCOPES = "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/spreadsheets.readonly";
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const statusDiv = document.getElementById('status');
+        const userInfoDiv = document.getElementById('userInfo');
+
+        // Check if token exists in localStorage
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('access_token');
+            const email = localStorage.getItem('user_email');
+            const name = localStorage.getItem('user_name');
+            
+            if (token && email) {
+                showUserInfo(email, name || 'N/A');
+            }
+        });
+
+        // Login button click handler - use PKCE flow
+        loginBtn.addEventListener('click', async () => {
+            try {
+                showStatus('Connecting to Google...', 'loading');
+                loginBtn.disabled = true;
+
+                const state = crypto.randomUUID();
+                const verifier = crypto.randomUUID() + crypto.randomUUID();
+                localStorage.setItem("pkce_verifier", verifier);
+                localStorage.setItem("oauth_state", state);
+
+                crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))
+                    .then(buf => {
+                        const challenge = btoa(String.fromCharCode(...new Uint8Array(buf)))
+                            .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+                        const url =
+                            "https://accounts.google.com/o/oauth2/v2/auth?" +
+                            new URLSearchParams({
+                                client_id: CLIENT_ID,
+                                redirect_uri: REDIRECT_URI,
+                                response_type: "code",
+                                scope: SCOPES,
+                                access_type: "offline",
+                                prompt: "consent",
+                                code_challenge: challenge,
+                                code_challenge_method: "S256",
+                                state,
+                            });
+
+                        window.location.href = url;
+                    });
+
+            } catch (error) {
+                console.error('Login error:', error);
+                showStatus(`Login failed: ${error.message}`, 'error');
+                loginBtn.disabled = false;
+            }
+        });
+
+        // Logout button click handler
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('pkce_verifier');
+            localStorage.removeItem('oauth_state');
+            
+            userInfoDiv.style.display = 'none';
+            loginBtn.style.display = 'inline-flex';
+            loginBtn.disabled = false;
+            showStatus('Logged out successfully!', 'success');
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 2000);
+        });
+
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function showUserInfo(email, name) {
+            document.getElementById('userEmail').textContent = email;
+            document.getElementById('userName').textContent = name;
+            document.getElementById('userToken').textContent = 'Stored in browser (localStorage)';
+            
+            loginBtn.style.display = 'none';
+            userInfoDiv.style.display = 'block';
+            showStatus('Login successful!', 'success');
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

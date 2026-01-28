@@ -35,6 +35,30 @@ router.get('/auth/google/url', authLimiter, authController.getAuthUrl);
 
 /**
  * @swagger
+ * /api/auth/google/token:
+ *   post:
+ *     summary: Exchange Google authorization code for JWT token (for frontend PKCE flow) | Trao đổi mã ủy quyền Google để lấy JWT
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: Authorization code from Google
+ *     responses:
+ *       200:
+ *         description: Token exchange successful
+ */
+router.post('/auth/google/token', authLimiter, authController.exchangeGoogleToken);
+
+/**
+ * @swagger
  * /api/auth/google/callback:
  *   get:
  *     summary: Google OAuth 2.0 Callback | Xử lý callback từ Google
@@ -45,6 +69,55 @@ router.get(
   authLimiter,
   validate({ query: googleCallbackQuerySchema }),
   authController.googleCallback
+);
+
+/**
+ * @swagger
+ * /api/auth/google/configure:
+ *   post:
+ *     summary: Configure user's Google OAuth credentials | Cấu hình Google OAuth
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - googleClientId
+ *               - googleClientSecret
+ *             properties:
+ *               googleClientId:
+ *                 type: string
+ *               googleClientSecret:
+ *                 type: string
+ *               googleCallbackUrl:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Configuration successful
+ */
+router.post(
+  '/auth/google/configure',
+  authLimiter,
+  authenticate,
+  authController.configureGoogleOAuth
+);
+
+/**
+ * @swagger
+ * /api/auth/google/config:
+ *   get:
+ *     summary: Get user's Google OAuth configuration | Lấy cấu hình Google OAuth
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Configuration retrieved
+ */
+router.get(
+  '/auth/google/config',
+  authenticate,
+  authController.getGoogleOAuthConfig
 );
 
 /**

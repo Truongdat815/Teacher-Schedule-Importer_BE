@@ -11,6 +11,8 @@ const envSchema = z.object({
   // Server
   PORT: z.string().default('5000').transform(Number),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  BACKEND_URL: z.string().default('http://localhost:5000'),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
 
   // Database
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
@@ -56,6 +58,8 @@ try {
   env = {
     PORT: 5000,
     NODE_ENV: 'development',
+    BACKEND_URL: 'http://localhost:5000',
+    FRONTEND_URL: 'http://localhost:5173',
     DATABASE_URL: process.env.DATABASE_URL || '',
     JWT_SECRET: 'dev-secret-key-change-in-production-min-32-chars-long',
     JWT_EXPIRES_IN: '7d',
